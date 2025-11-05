@@ -33,33 +33,55 @@ def init_default_admin():
         admin_email = "admin@vncmanager.local"
         admin_password = "admin123"
         
+        # Ensure password is a string and not too long
+        if isinstance(admin_password, bytes):
+            admin_password = admin_password.decode('utf-8')
+        admin_password = str(admin_password)[:72]  # Bcrypt limit
+        
         existing_user = db.query(User).filter(User.username == admin_username).first()
         if not existing_user:
-            hashed_password = get_password_hash(admin_password)
-            admin_user = User(
-                username=admin_username,
-                email=admin_email,
-                full_name="Administrator",
-                hashed_password=hashed_password,
-                is_admin=True
-            )
-            db.add(admin_user)
-            db.commit()
-            # Verify the password was saved correctly
-            test_user = db.query(User).filter(User.username == admin_username).first()
-            if test_user and verify_password(admin_password, test_user.hashed_password):
-                print(f"✅ Default admin account created: {admin_username} / {admin_password}")
-            else:
-                print(f"⚠️  Admin account created but password verification failed!")
+            try:
+                hashed_password = get_password_hash(admin_password)
+                # Verify hash was created successfully
+                if not hashed_password or len(hashed_password) == 0:
+                    raise ValueError("Password hash is empty")
+                    
+                admin_user = User(
+                    username=admin_username,
+                    email=admin_email,
+                    full_name="Administrator",
+                    hashed_password=hashed_password,
+                    is_admin=True
+                )
+                db.add(admin_user)
+                db.commit()
+                
+                # Verify the password was saved correctly
+                test_user = db.query(User).filter(User.username == admin_username).first()
+                if test_user and verify_password(admin_password, test_user.hashed_password):
+                    print(f"✅ Default admin account created: {admin_username} / {admin_password}")
+                else:
+                    print(f"⚠️  Admin account created but password verification failed!")
+                    # Try to fix it
+                    test_user.hashed_password = get_password_hash(admin_password)
+                    db.commit()
+                    print(f"✅ Admin password fixed: {admin_username} / {admin_password}")
+            except Exception as hash_error:
+                print(f"⚠️  Error hashing password: {hash_error}")
+                raise
         else:
             # Verify existing admin password
             if verify_password(admin_password, existing_user.hashed_password):
                 print(f"ℹ️  Admin account already exists and password is correct")
             else:
                 print(f"⚠️  Admin account exists but password doesn't match! Resetting password...")
-                existing_user.hashed_password = get_password_hash(admin_password)
-                db.commit()
-                print(f"✅ Admin password reset: {admin_username} / {admin_password}")
+                try:
+                    existing_user.hashed_password = get_password_hash(admin_password)
+                    db.commit()
+                    print(f"✅ Admin password reset: {admin_username} / {admin_password}")
+                except Exception as hash_error:
+                    print(f"⚠️  Error resetting password: {hash_error}")
+                    raise
     except Exception as e:
         print(f"⚠️  Error creating default admin: {e}")
         import traceback
