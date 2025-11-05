@@ -1,25 +1,16 @@
 import axios from 'axios';
 
 // Get API URL from environment or use relative path
-// In production, use relative path or set REACT_APP_API_URL
 const getApiUrl = () => {
-  // If running in Docker, use backend service name
-  if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
-  }
-  // Try to detect if we're in Docker or local
-  // For Docker: use backend service, for local: use localhost
   const hostname = window.location.hostname;
-  const port = window.location.port;
+  const protocol = window.location.protocol;
   
-  // If accessing via IP or domain, use that for API
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // Use same hostname but backend port
-    return `${window.location.protocol}//${hostname}:18888`;
-  }
+  // Use same hostname but backend port (18888)
+  // This works for both localhost and network IPs
+  const apiUrl = `${protocol}//${hostname}:18888`;
   
-  // Default for localhost
-  return 'http://localhost:18888';
+  console.log('API URL:', apiUrl);
+  return apiUrl;
 };
 
 const API_URL = getApiUrl();
@@ -45,10 +36,21 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Handle 401 errors
+// Handle errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log network errors for debugging
+    if (!error.response) {
+      console.error('Network Error:', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: `${error.config?.baseURL}${error.config?.url}`
+      });
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';

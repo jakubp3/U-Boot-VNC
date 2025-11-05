@@ -56,12 +56,17 @@ app = FastAPI(title="U-Boot VNC API", version="1.0.0")
 
 # CORS middleware
 # Allow all origins in development (for Docker network access)
+# Note: allow_origins=["*"] and allow_credentials=True cannot be used together
+# So we need to handle CORS differently
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for Docker/network access
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")

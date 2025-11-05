@@ -37,9 +37,18 @@ const Login: React.FC = () => {
       await login(username, password);
       navigate('/dashboard');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || 'Błąd logowania';
-      setError(errorMessage);
-      console.error('Login error:', err);
+      console.error('Login error details:', err);
+      
+      // Better error handling for network errors
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+        setError('Błąd połączenia z serwerem. Sprawdź czy backend działa na porcie 18888.');
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Błąd logowania. Sprawdź konsolę przeglądarki (F12) dla szczegółów.');
+      }
     }
   };
 
