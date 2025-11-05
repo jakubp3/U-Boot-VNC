@@ -50,10 +50,8 @@ const Login: React.FC = () => {
       await login(username.trim(), password);
       // Clear error on success and navigate
       setError('');
-      // Small delay to ensure token is set
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
+      // Navigate immediately after successful login
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       console.error('Login error details:', err);
       
