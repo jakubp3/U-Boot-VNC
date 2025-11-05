@@ -34,64 +34,128 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   useEffect(() => {
     if (!screenRef.current || !RFB) return;
 
-    try {
-      // Parse VNC URL - support both noVNC URLs and direct VNC URLs
-      let wsUrl = url;
-      
-      // If it's an HTTP/HTTPS URL, try to convert to WebSocket
-      if (url.startsWith('http://')) {
-        wsUrl = url.replace(/^http:\/\//, 'ws://');
-      } else if (url.startsWith('https://')) {
-        wsUrl = url.replace(/^https:\/\//, 'wss://');
-      }
-      
-      // Extract WebSocket URL from noVNC URLs
-      // Format: http://host:port/path?host=target&port=5900
-      if (wsUrl.includes('noVNC') || wsUrl.includes('?')) {
-        try {
-          const urlObj = new URL(url);
-          const host = urlObj.searchParams.get('host') || urlObj.hostname;
-          const port = urlObj.searchParams.get('port') || '5900';
-          const wsProtocol = url.startsWith('https://') ? 'wss' : 'ws';
-          wsUrl = `${wsProtocol}://${host}:${port}`;
-        } catch (e) {
-          // If URL parsing fails, use original URL
-          console.warn('Could not parse VNC URL, using as-is:', url);
+    const connectToVNC = async () => {
+      try {
+        // Parse VNC URL - support multiple formats
+        let wsUrl = url;
+        let host = '';
+        let port = '';
+        let protocol = 'ws';
+        
+        console.log('Parsing VNC URL:', url);
+        
+        // Case 1: Full HTTP/HTTPS URL (e.g., http://localhost:6080/vnc.html)
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          try {
+            const urlObj = new URL(url);
+            host = urlObj.hostname;
+            port = urlObj.port || (url.startsWith('https://') ? '443' : '80');
+            protocol = url.startsWith('https://') ? 'wss' : 'ws';
+            
+            // If URL contains /vnc.html or similar, it's likely noVNC
+            // WebSocket endpoint is usually /websockify on the same host:port
+            if (urlObj.pathname.includes('/vnc') || urlObj.pathname.includes('/novnc')) {
+              // Check for query params that might specify target host/port
+              const targetHost = urlObj.searchParams.get('host');
+              const targetPort = urlObj.searchParams.get('port');
+              
+              if (targetHost && targetPort) {
+                // Remote VNC server specified in query params
+                host = targetHost;
+                port = targetPort;
+                wsUrl = `${protocol}://${host}:${port}`;
+              } else {
+                // Local noVNC server - use /websockify endpoint
+                // Common noVNC WebSocket paths: /websockify, /websocket, /ws
+                wsUrl = `${protocol}://${host}:${port}/websockify`;
+              }
+            } else {
+              // Direct conversion from HTTP to WS
+              wsUrl = url.replace(/^https?:\/\//, `${protocol}://`);
+            }
+          } catch (e) {
+            console.error('Error parsing HTTP URL:', e);
+            setStatus('Błąd parsowania URL');
+            return;
+          }
         }
-      }
-      
-      // Create RFB connection
-      const rfb = new RFB(screenRef.current, wsUrl, {
-        credentials: {
-          password: '', // Add if needed
-        },
-      });
-
-      rfb.addEventListener('connect', () => {
-        setConnected(true);
-        setStatus('Połączono');
-      });
-
-      rfb.addEventListener('disconnect', (e: any) => {
-        setConnected(false);
-        setStatus(`Rozłączono: ${e.detail.clean ? 'Normalne rozłączenie' : e.detail.reason}`);
-      });
-
-      rfb.addEventListener('credentialsrequired', () => {
-        setStatus('Wymagane dane uwierzytelniające');
-      });
-
-      rfbRef.current = rfb;
-
-      return () => {
-        if (rfbRef.current) {
-          rfbRef.current.disconnect();
+        // Case 2: Just host:port (e.g., localhost:6080)
+        else if (url.includes(':') && !url.startsWith('ws://') && !url.startsWith('wss://')) {
+          const parts = url.split(':');
+          if (parts.length === 2) {
+            host = parts[0];
+            port = parts[1];
+            // Try common WebSocket paths
+            wsUrl = `ws://${host}:${port}/websockify`;
+          } else {
+            wsUrl = `ws://${url}`;
+          }
         }
-      };
-    } catch (error) {
-      console.error('Error connecting to VNC:', error);
-      setStatus('Błąd połączenia');
-    }
+        // Case 3: Already a WebSocket URL
+        else if (url.startsWith('ws://') || url.startsWith('wss://')) {
+          wsUrl = url;
+        }
+        // Case 4: Just hostname (default to common VNC port 5900)
+        else {
+          host = url;
+          port = '5900';
+          wsUrl = `ws://${host}:${port}`;
+        }
+        
+        console.log('Connecting to WebSocket URL:', wsUrl);
+        setStatus(`Łączenie z ${wsUrl}...`);
+        
+        // Create RFB connection
+        const rfb = new RFB(screenRef.current, wsUrl, {
+          credentials: {
+            password: '', // Add if needed
+          },
+        });
+
+        rfb.addEventListener('connect', () => {
+          setConnected(true);
+          setStatus('Połączono');
+          console.log('VNC connected successfully');
+        });
+
+        rfb.addEventListener('disconnect', (e: any) => {
+          setConnected(false);
+          const reason = e.detail?.reason || 'Nieznany błąd';
+          setStatus(`Rozłączono: ${e.detail?.clean ? 'Normalne rozłączenie' : reason}`);
+          console.log('VNC disconnected:', e.detail);
+        });
+
+        rfb.addEventListener('credentialsrequired', () => {
+          setStatus('Wymagane hasło VNC');
+          console.log('VNC credentials required');
+        });
+
+        rfb.addEventListener('securityfailure', (e: any) => {
+          setStatus(`Błąd bezpieczeństwa: ${e.detail?.reason || 'Nieznany błąd'}`);
+          console.error('VNC security failure:', e.detail);
+        });
+
+        rfbRef.current = rfb;
+
+        return () => {
+          if (rfbRef.current) {
+            rfbRef.current.disconnect();
+          }
+        };
+      } catch (error: any) {
+        console.error('Error connecting to VNC:', error);
+        setStatus(`Błąd połączenia: ${error.message || 'Nieznany błąd'}`);
+      }
+    };
+
+    connectToVNC();
+
+    return () => {
+      if (rfbRef.current) {
+        rfbRef.current.disconnect();
+        rfbRef.current = null;
+      }
+    };
   }, [url, RFB]);
 
   const handleDisconnect = () => {
