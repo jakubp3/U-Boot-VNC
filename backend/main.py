@@ -34,9 +34,7 @@ def init_default_admin():
         admin_password = "admin123"
         
         # Ensure password is a string and not too long
-        if isinstance(admin_password, bytes):
-            admin_password = admin_password.decode('utf-8')
-        admin_password = str(admin_password)[:72]  # Bcrypt limit
+        admin_password = str(admin_password).strip()[:72]  # Bcrypt limit
         
         existing_user = db.query(User).filter(User.username == admin_username).first()
         if not existing_user:
