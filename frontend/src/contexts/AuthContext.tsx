@@ -51,9 +51,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Brak tokenu w odpowiedzi serwera');
       }
       localStorage.setItem('token', response.access_token);
+      // Wait a bit before refreshing to ensure token is set
+      await new Promise(resolve => setTimeout(resolve, 100));
       await refreshUser();
     } catch (error: any) {
       console.error('Login error in AuthContext:', error);
+      // Re-throw to let Login component handle the error display
       throw error;
     }
   };

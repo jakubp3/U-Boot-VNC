@@ -46,7 +46,9 @@ const Login: React.FC = () => {
       return;
     }
     try {
-      await login(username, password);
+      await login(username.trim(), password);
+      // Clear error on success
+      setError('');
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error details:', err);
@@ -55,7 +57,11 @@ const Login: React.FC = () => {
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
         setError('Błąd połączenia z serwerem. Sprawdź czy backend działa na porcie 18888.');
       } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+        // Only show error if it's not a successful login that was interrupted
+        const errorDetail = err.response.data.detail;
+        if (errorDetail !== 'Incorrect username or password' || err.response.status !== 401) {
+          setError(errorDetail);
+        }
       } else if (err.message) {
         setError(err.message);
       } else {
