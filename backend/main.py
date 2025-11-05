@@ -356,6 +356,34 @@ def health_check():
     }
 
 
+@app.get("/api/debug/admin-check")
+def debug_admin_check(db: Session = Depends(get_db)):
+    """Debug endpoint to check admin account status"""
+    admin_user = db.query(User).filter(User.username == "admin").first()
+    if not admin_user:
+        return {
+            "exists": False,
+            "message": "Admin user not found in database"
+        }
+    
+    # Test password verification
+    test_password = "admin123"
+    password_valid = verify_password(test_password, admin_user.hashed_password)
+    
+    return {
+        "exists": True,
+        "username": admin_user.username,
+        "email": admin_user.email,
+        "is_admin": admin_user.is_admin,
+        "password_hash": admin_user.hashed_password[:20] + "...",  # First 20 chars only
+        "password_test": {
+            "test_password": test_password,
+            "verification_result": password_valid
+        },
+        "message": "Password verification OK" if password_valid else "Password verification FAILED"
+    }
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
