@@ -1,6 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './VNCViewer.css';
 
+// Import noVNC - try different paths
+let RFB: any = null;
+try {
+  // Try direct import first
+  const novnc = require('@novnc/novnc');
+  RFB = novnc.RFB || novnc.default?.RFB || novnc.default || novnc;
+} catch (e1) {
+  try {
+    // Try core/rfb
+    const novncCore = require('@novnc/novnc/core/rfb');
+    RFB = novncCore.default || novncCore.RFB || novncCore;
+  } catch (e2) {
+    try {
+      // Try lib/rfb (newer versions)
+      const novncLib = require('@novnc/novnc/lib/rfb');
+      RFB = novncLib.default || novncLib.RFB || novncLib;
+    } catch (e3) {
+      console.error('Failed to import noVNC:', e3);
+    }
+  }
+}
+
 interface VNCViewerProps {
   url: string;
   machineName: string;
@@ -12,96 +34,22 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   const rfbRef = useRef<any>(null);
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('Łączenie...');
-  const [RFB, setRFB] = useState<any>(null);
+  const [rfbLoaded, setRfbLoaded] = useState(false);
 
-  // Load noVNC dynamically
+  // Check if RFB is loaded
   useEffect(() => {
-    const loadNoVNC = async () => {
-      try {
-        console.log('Loading noVNC library...');
-        
-        // Try different import paths for noVNC
-        let RFBClass: any = null;
-        let importError: any = null;
-        
-        // Try 1: Default export from @novnc/novnc
-        try {
-          const novnc = await import('@novnc/novnc');
-          RFBClass = novnc.default?.RFB || novnc.RFB || novnc.default || novnc;
-          if (RFBClass) {
-            console.log('noVNC loaded via default import');
-          }
-        } catch (e1) {
-          console.warn('Default import failed, trying core/rfb:', e1);
-          importError = e1;
-        }
-        
-        // Try 2: Core RFB module (if first attempt failed)
-        if (!RFBClass) {
-          try {
-            const novncCore = await import('@novnc/novnc/core/rfb.js');
-            RFBClass = novncCore.default || novncCore.RFB || novncCore;
-            if (RFBClass) {
-              console.log('noVNC loaded via core/rfb.js');
-            }
-          } catch (e2) {
-            console.warn('core/rfb.js import failed, trying core/rfb:', e2);
-            
-            // Try 3: Core module without .js
-            try {
-              const novncCore2 = await import('@novnc/novnc/core/rfb');
-              RFBClass = novncCore2.default || novncCore2.RFB || novncCore2;
-              if (RFBClass) {
-                console.log('noVNC loaded via core/rfb');
-              }
-            } catch (e3) {
-              console.warn('core/rfb import failed, trying lib/rfb:', e3);
-              
-              // Try 4: lib/rfb (newer versions)
-              try {
-                const novncLib = await import('@novnc/novnc/lib/rfb');
-                RFBClass = novncLib.default || novncLib.RFB || novncLib;
-                if (RFBClass) {
-                  console.log('noVNC loaded via lib/rfb');
-                }
-              } catch (e4) {
-                console.error('All import attempts failed:', e4);
-                throw new Error(`Cannot import noVNC: ${e4}. Tried: default, core/rfb.js, core/rfb, lib/rfb`);
-              }
-            }
-          }
-        }
-        
-        if (!RFBClass) {
-          throw new Error('RFB class not found in noVNC module');
-        }
-        
-        // Import styles (optional)
-        try {
-          await import('@novnc/novnc/core/styles/base.css');
-        } catch (cssError) {
-          console.warn('Could not load noVNC styles:', cssError);
-          // Try alternative style path
-          try {
-            await import('@novnc/novnc/lib/styles/base.css');
-          } catch (cssError2) {
-            console.warn('Could not load noVNC styles from lib either:', cssError2);
-          }
-        }
-        
-        console.log('noVNC loaded successfully:', RFBClass);
-        setRFB(RFBClass);
-        setStatus('Gotowe do połączenia');
-      } catch (error: any) {
-        console.error('Error loading noVNC:', error);
-        setStatus(`Błąd ładowania noVNC: ${error.message || 'Nieznany błąd'}. Sprawdź konsolę (F12) dla szczegółów.`);
-      }
-    };
-    loadNoVNC();
+    if (RFB) {
+      console.log('noVNC RFB loaded:', RFB);
+      setRfbLoaded(true);
+      setStatus('Gotowe do połączenia');
+    } else {
+      console.error('noVNC RFB not available');
+      setStatus('Błąd: noVNC nie jest dostępny. Sprawdź czy biblioteka jest zainstalowana.');
+    }
   }, []);
 
   useEffect(() => {
-    if (!screenRef.current || !RFB) return;
+    if (!screenRef.current || !RFB || !rfbLoaded) return;
 
     const connectToVNC = async () => {
       try {
