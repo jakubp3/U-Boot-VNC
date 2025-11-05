@@ -36,10 +36,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const userData = await authAPI.getCurrentUser();
       setUser(userData);
+      setLoading(false);
     } catch (error) {
+      console.error('Error refreshing user:', error);
       localStorage.removeItem('token');
       setUser(null);
-    } finally {
       setLoading(false);
     }
   };
@@ -50,12 +51,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!response || !response.access_token) {
         throw new Error('Brak tokenu w odpowiedzi serwera');
       }
+      console.log('Login successful, storing token');
       localStorage.setItem('token', response.access_token);
-      // Wait a bit before refreshing to ensure token is set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      await refreshUser();
+      
+      // Refresh user data immediately
+      const userData = await authAPI.getCurrentUser();
+      setUser(userData);
+      setLoading(false);
+      
+      console.log('User data refreshed:', userData);
     } catch (error: any) {
       console.error('Login error in AuthContext:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+      setLoading(false);
       // Re-throw to let Login component handle the error display
       throw error;
     }

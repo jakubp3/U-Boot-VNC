@@ -30,7 +30,7 @@ def init_default_admin():
     db = SessionLocal()
     try:
         admin_username = "admin"
-        admin_email = "admin@vncmanager.local"
+        admin_email = "admin@localhost.local"
         admin_password = "admin123"
         
         # Ensure password is a string and not too long

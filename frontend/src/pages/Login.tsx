@@ -46,10 +46,14 @@ const Login: React.FC = () => {
       return;
     }
     try {
+      setError(''); // Clear error before login
       await login(username.trim(), password);
-      // Clear error on success
+      // Clear error on success and navigate
       setError('');
-      navigate('/dashboard');
+      // Small delay to ensure token is set
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
     } catch (err: any) {
       console.error('Login error details:', err);
       
