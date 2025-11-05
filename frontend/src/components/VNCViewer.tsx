@@ -1,20 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './VNCViewer.css';
 
-// Import noVNC - try different paths
+// Import noVNC - use ES6 import with fallback
+// @ts-ignore
+import * as novnc from '@novnc/novnc';
+
+// Try to get RFB from different export patterns
 let RFB: any = null;
-try {
-  // Try direct import first
-  const novnc = require('@novnc/novnc');
-  RFB = novnc.RFB || novnc.default?.RFB || novnc.default || novnc;
-} catch (e1) {
+if (novnc.RFB) {
+  RFB = novnc.RFB;
+} else if (novnc.default?.RFB) {
+  RFB = novnc.default.RFB;
+} else if (novnc.default) {
+  RFB = novnc.default;
+} else {
+  // Try alternative import paths if main import doesn't work
   try {
-    // Try core/rfb
+    // @ts-ignore
     const novncCore = require('@novnc/novnc/core/rfb');
     RFB = novncCore.default || novncCore.RFB || novncCore;
   } catch (e2) {
     try {
-      // Try lib/rfb (newer versions)
+      // @ts-ignore
       const novncLib = require('@novnc/novnc/lib/rfb');
       RFB = novncLib.default || novncLib.RFB || novncLib;
     } catch (e3) {
