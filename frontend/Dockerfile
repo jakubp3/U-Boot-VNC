@@ -7,6 +7,9 @@ RUN npm install --legacy-peer-deps
 
 COPY . .
 
+# Ensure node_modules is properly installed
+RUN npm install --legacy-peer-deps
+
 EXPOSE 3000
 
 CMD ["npm", "start"]

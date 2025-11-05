@@ -10,6 +10,7 @@
     "axios": "^1.6.2",
     "@novnc/novnc": "^1.4.0",
     "typescript": "^4.9.5",
+    "ajv": "^8.12.0",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
     "web-vitals": "^3.5.0"
