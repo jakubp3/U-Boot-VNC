@@ -1,7 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-// @ts-ignore - noVNC doesn't have perfect TypeScript types
-import RFB from '@novnc/novnc/core/rfb';
-import '@novnc/novnc/core/styles/base.css';
 import './VNCViewer.css';
 
 interface VNCViewerProps {
@@ -12,12 +9,30 @@ interface VNCViewerProps {
 
 const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   const screenRef = useRef<HTMLDivElement>(null);
-  const rfbRef = useRef<RFB | null>(null);
+  const rfbRef = useRef<any>(null);
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('Łączenie...');
+  const [RFB, setRFB] = useState<any>(null);
+
+  // Load noVNC dynamically
+  useEffect(() => {
+    const loadNoVNC = async () => {
+      try {
+        // @ts-ignore
+        const novnc = await import('@novnc/novnc/core/rfb');
+        // Import styles
+        await import('@novnc/novnc/core/styles/base.css');
+        setRFB(novnc.default || novnc);
+      } catch (error) {
+        console.error('Error loading noVNC:', error);
+        setStatus('Błąd ładowania noVNC');
+      }
+    };
+    loadNoVNC();
+  }, []);
 
   useEffect(() => {
-    if (!screenRef.current) return;
+    if (!screenRef.current || !RFB) return;
 
     try {
       // Parse VNC URL - support both noVNC URLs and direct VNC URLs
@@ -77,7 +92,7 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
       console.error('Error connecting to VNC:', error);
       setStatus('Błąd połączenia');
     }
-  }, [url]);
+  }, [url, RFB]);
 
   const handleDisconnect = () => {
     if (rfbRef.current) {
