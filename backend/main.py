@@ -5,6 +5,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List, Optional
 import uvicorn
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 from database import SessionLocal, engine, Base
 from models import User, VNCMachine
