@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 // @ts-ignore - noVNC doesn't have perfect TypeScript types
-import RFB from '@novnc/novnc/core/rfb.js';
+import RFB from '@novnc/novnc/core/rfb';
 import '@novnc/novnc/core/styles/base.css';
 import './VNCViewer.css';
 
