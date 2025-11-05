@@ -304,6 +304,17 @@ def get_admin_info(db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "ok",
+        "message": "Backend is running",
+        "port": 8000,
+        "external_port": 18888
+    }
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 

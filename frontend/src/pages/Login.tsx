@@ -16,14 +16,26 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load admin info
-    apiClient.get('/api/auth/admin-info')
-      .then(response => {
-        setAdminInfo(response.data);
-      })
-      .catch(() => {
-        // Ignore errors
-      });
+    // First check if backend is accessible
+    const checkBackend = async () => {
+      try {
+        // Try health check first
+        const healthResponse = await apiClient.get('/api/health');
+        console.log('Backend health:', healthResponse.data);
+        
+        // Then load admin info
+        const adminResponse = await apiClient.get('/api/auth/admin-info');
+        setAdminInfo(adminResponse.data);
+      } catch (error: any) {
+        console.error('Backend connection error:', error);
+        // If health check fails, show error
+        if (error.code === 'ERR_NETWORK' || !error.response) {
+          setError('Nie można połączyć się z serwerem. Sprawdź czy backend działa na porcie 18888.');
+        }
+      }
+    };
+    
+    checkBackend();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
