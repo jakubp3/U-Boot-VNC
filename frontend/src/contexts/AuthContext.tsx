@@ -45,9 +45,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (username: string, password: string) => {
-    const response = await authAPI.login({ username, password });
-    localStorage.setItem('token', response.access_token);
-    await refreshUser();
+    try {
+      const response = await authAPI.login({ username, password });
+      if (!response || !response.access_token) {
+        throw new Error('Brak tokenu w odpowiedzi serwera');
+      }
+      localStorage.setItem('token', response.access_token);
+      await refreshUser();
+    } catch (error: any) {
+      console.error('Login error in AuthContext:', error);
+      throw error;
+    }
   };
 
   const logout = () => {

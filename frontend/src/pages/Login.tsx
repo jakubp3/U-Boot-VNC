@@ -29,11 +29,17 @@ const Login: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!username.trim() || !password.trim()) {
+      setError('Wprowadź nazwę użytkownika i hasło');
+      return;
+    }
     try {
       await login(username, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Błąd logowania');
+      const errorMessage = err.response?.data?.detail || err.message || 'Błąd logowania';
+      setError(errorMessage);
+      console.error('Login error:', err);
     }
   };
 
@@ -97,10 +103,17 @@ const Login: React.FC = () => {
             </button>
             <button
               type="button"
-              className="btn-link"
-              onClick={() => setIsRegistering(false)}
+              className="btn-secondary"
+              onClick={() => {
+                setIsRegistering(false);
+                setError('');
+                setUsername('');
+                setPassword('');
+                setEmail('');
+                setFullName('');
+              }}
             >
-              Masz już konto? Zaloguj się
+              Zaloguj się
             </button>
           </form>
         ) : (
@@ -129,10 +142,15 @@ const Login: React.FC = () => {
             </button>
             <button
               type="button"
-              className="btn-link"
-              onClick={() => setIsRegistering(true)}
+              className="btn-secondary"
+              onClick={() => {
+                setIsRegistering(true);
+                setError('');
+                setUsername('');
+                setPassword('');
+              }}
             >
-              Nie masz konta? Zarejestruj się
+              Zarejestruj się
             </button>
           </form>
         )}
