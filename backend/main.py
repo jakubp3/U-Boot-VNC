@@ -31,20 +31,35 @@ def init_default_admin():
         
         existing_user = db.query(User).filter(User.username == admin_username).first()
         if not existing_user:
+            hashed_password = get_password_hash(admin_password)
             admin_user = User(
                 username=admin_username,
                 email=admin_email,
                 full_name="Administrator",
-                hashed_password=get_password_hash(admin_password),
+                hashed_password=hashed_password,
                 is_admin=True
             )
             db.add(admin_user)
             db.commit()
-            print(f"✅ Default admin account created: {admin_username} / {admin_password}")
+            # Verify the password was saved correctly
+            test_user = db.query(User).filter(User.username == admin_username).first()
+            if test_user and verify_password(admin_password, test_user.hashed_password):
+                print(f"✅ Default admin account created: {admin_username} / {admin_password}")
+            else:
+                print(f"⚠️  Admin account created but password verification failed!")
         else:
-            print(f"ℹ️  Admin account already exists")
+            # Verify existing admin password
+            if verify_password(admin_password, existing_user.hashed_password):
+                print(f"ℹ️  Admin account already exists and password is correct")
+            else:
+                print(f"⚠️  Admin account exists but password doesn't match! Resetting password...")
+                existing_user.hashed_password = get_password_hash(admin_password)
+                db.commit()
+                print(f"✅ Admin password reset: {admin_username} / {admin_password}")
     except Exception as e:
         print(f"⚠️  Error creating default admin: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
     finally:
         db.close()
@@ -109,21 +124,36 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/api/auth/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Debug logging
+    logger.info(f"Login attempt for username: {form_data.username}")
+    
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user:
+        logger.warning(f"User not found: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not verify_password(form_data.password, user.hashed_password):
+    logger.info(f"User found: {user.username}, verifying password...")
+    
+    # Test password verification
+    password_valid = verify_password(form_data.password, user.hashed_password)
+    logger.info(f"Password verification result: {password_valid}")
+    
+    if not password_valid:
+        logger.warning(f"Password verification failed for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    logger.info(f"Login successful for user: {form_data.username}")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
