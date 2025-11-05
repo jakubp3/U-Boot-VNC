@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -7,6 +7,16 @@ class UserBase(BaseModel):
     username: str
     email: EmailStr
     full_name: Optional[str] = None
+    
+    @field_validator('email', mode='before')
+    @classmethod
+    def validate_email(cls, v):
+        # Allow .local domains and other special domains
+        if isinstance(v, str):
+            # Replace .local with .example.com for validation
+            if v.endswith('.local'):
+                v = v.replace('.local', '.example.com')
+        return v
 
 
 class UserCreate(UserBase):

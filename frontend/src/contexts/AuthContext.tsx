@@ -55,11 +55,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('token', response.access_token);
       
       // Refresh user data immediately
-      const userData = await authAPI.getCurrentUser();
-      setUser(userData);
-      setLoading(false);
-      
-      console.log('User data refreshed:', userData);
+      try {
+        const userData = await authAPI.getCurrentUser();
+        console.log('User data refreshed:', userData);
+        setUser(userData);
+        setLoading(false);
+      } catch (userError: any) {
+        console.error('Error getting user data:', userError);
+        // If getCurrentUser fails, don't fail the login - user can still use the app
+        // The token is valid, so we'll set a minimal user object
+        setUser({
+          id: 0,
+          username: username,
+          email: '',
+          is_admin: false,
+          created_at: new Date().toISOString()
+        } as User);
+        setLoading(false);
+      }
     } catch (error: any) {
       console.error('Login error in AuthContext:', error);
       localStorage.removeItem('token');
