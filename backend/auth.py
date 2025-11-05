@@ -15,7 +15,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 
@@ -23,7 +23,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Ensure password is a string
     if isinstance(plain_password, bytes):
         plain_password = plain_password.decode('utf-8')
-    plain_password = str(plain_password)[:72]  # Bcrypt limit
+    plain_password = str(plain_password).strip()
+    # Bcrypt limit is 72 bytes
+    if len(plain_password.encode('utf-8')) > 72:
+        plain_password = plain_password[:72]
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -31,7 +34,10 @@ def get_password_hash(password: str) -> str:
     # Ensure password is a string and not too long for bcrypt
     if isinstance(password, bytes):
         password = password.decode('utf-8')
-    password = str(password)[:72]  # Bcrypt limit is 72 bytes
+    password = str(password).strip()
+    # Bcrypt limit is 72 bytes, but we need to ensure it's encoded correctly
+    if len(password.encode('utf-8')) > 72:
+        password = password[:72]  # Truncate if too long
     return pwd_context.hash(password)
 
 
