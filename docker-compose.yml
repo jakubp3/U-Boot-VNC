@@ -28,7 +28,7 @@ services:
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
     ports:
-      - "8000:8000"
+      - "18888:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -42,11 +42,11 @@ services:
       dockerfile: Dockerfile
     container_name: vnc_manager_frontend
     ports:
-      - "3000:3000"
+      - "18889:3000"
     depends_on:
       - backend
     environment:
-      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_URL: http://localhost:18888
     volumes:
       - ./frontend:/app
       - /app/node_modules

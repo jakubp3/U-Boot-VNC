@@ -47,9 +47,9 @@ docker-compose up -d
 ```
 
 3. Aplikacja będzie dostępna pod adresem:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+   - Frontend: http://localhost:18889
+   - Backend API: http://localhost:18888
+   - API Docs: http://localhost:18888/docs
 
 ## Pierwszy użytkownik administratora
 
