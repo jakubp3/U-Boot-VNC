@@ -18,14 +18,22 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   useEffect(() => {
     const loadNoVNC = async () => {
       try {
+        console.log('Loading noVNC library...');
         // @ts-ignore
         const novnc = await import('@novnc/novnc/core/rfb');
         // Import styles
-        await import('@novnc/novnc/core/styles/base.css');
-        setRFB(novnc.default || novnc);
-      } catch (error) {
+        try {
+          await import('@novnc/novnc/core/styles/base.css');
+        } catch (cssError) {
+          console.warn('Could not load noVNC styles:', cssError);
+        }
+        const RFBClass = novnc.default || novnc.RFB || novnc;
+        console.log('noVNC loaded successfully:', RFBClass);
+        setRFB(RFBClass);
+        setStatus('Gotowe do połączenia');
+      } catch (error: any) {
         console.error('Error loading noVNC:', error);
-        setStatus('Błąd ładowania noVNC');
+        setStatus(`Błąd ładowania noVNC: ${error.message || 'Nieznany błąd'}`);
       }
     };
     loadNoVNC();
