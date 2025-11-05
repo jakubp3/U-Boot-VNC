@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
     <div className="dashboard">
       <header className="dashboard-header">
         <div className="header-content">
-          <h1>VNC Manager</h1>
+          <h1>U-Boot VNC</h1>
           <div className="header-actions">
             <span className="user-info">Witaj, {user?.username}</span>
             {user?.is_admin && (

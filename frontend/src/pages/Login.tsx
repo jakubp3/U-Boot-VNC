@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import apiClient from '../api/client';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -10,8 +11,20 @@ const Login: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+  const [adminInfo, setAdminInfo] = useState<{exists: boolean; username?: string; password?: string; message?: string} | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load admin info
+    apiClient.get('/api/auth/admin-info')
+      .then(response => {
+        setAdminInfo(response.data);
+      })
+      .catch(() => {
+        // Ignore errors
+      });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +53,7 @@ const Login: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h1>VNC Manager</h1>
+        <h1>U-Boot VNC</h1>
         {isRegistering ? (
           <form onSubmit={handleRegister}>
             <div className="form-group">
@@ -122,6 +135,18 @@ const Login: React.FC = () => {
               Nie masz konta? Zarejestruj się
             </button>
           </form>
+        )}
+        {adminInfo?.exists && (
+          <div className="admin-info">
+            <hr />
+            <div className="admin-info-content">
+              <strong>Domyślne konto administratora:</strong>
+              <div className="admin-credentials">
+                <span>Login: <code>{adminInfo.username}</code></span>
+                <span>Hasło: <code>{adminInfo.password}</code></span>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

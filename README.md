@@ -1,4 +1,4 @@
-# VNC Manager
+# U-Boot VNC
 
 Aplikacja do zarządzania połączeniami VNC z możliwością uruchomienia przez Docker Compose.
 

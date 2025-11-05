@@ -21,12 +21,43 @@ from auth import (
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="VNC Manager API", version="1.0.0")
+# Initialize default admin user
+def init_default_admin():
+    db = SessionLocal()
+    try:
+        admin_username = "admin"
+        admin_email = "admin@vncmanager.local"
+        admin_password = "admin123"
+        
+        existing_user = db.query(User).filter(User.username == admin_username).first()
+        if not existing_user:
+            admin_user = User(
+                username=admin_username,
+                email=admin_email,
+                full_name="Administrator",
+                hashed_password=get_password_hash(admin_password),
+                is_admin=True
+            )
+            db.add(admin_user)
+            db.commit()
+            print(f"✅ Default admin account created: {admin_username} / {admin_password}")
+        else:
+            print(f"ℹ️  Admin account already exists")
+    except Exception as e:
+        print(f"⚠️  Error creating default admin: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+# Create default admin on startup
+init_default_admin()
+
+app = FastAPI(title="U-Boot VNC API", version="1.0.0")
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=["http://localhost:3000", "http://frontend:3000", "http://localhost:18889"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

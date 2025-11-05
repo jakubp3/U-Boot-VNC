@@ -89,3 +89,46 @@
   text-align: center;
 }
 
+.admin-info {
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+.admin-info hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin-bottom: 1rem;
+}
+
+.admin-info-content {
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-info-content strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.admin-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 5px;
+}
+
+.admin-credentials code {
+  background: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #667eea;
+  font-weight: 600;
+}
+
