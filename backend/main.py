@@ -281,6 +281,23 @@ def get_machine(
     return db_machine
 
 
+@app.get("/api/auth/admin-info")
+def get_admin_info(db: Session = Depends(get_db)):
+    """Get default admin account information (only if exists)"""
+    admin_user = db.query(User).filter(User.username == "admin", User.is_admin == True).first()
+    if admin_user:
+        return {
+            "exists": True,
+            "username": "admin",
+            "password": "admin123",
+            "message": "Domyślne konto administratora"
+        }
+    return {
+        "exists": False,
+        "message": "Konto administratora nie zostało utworzone"
+    }
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
