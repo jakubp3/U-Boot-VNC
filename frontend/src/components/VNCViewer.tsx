@@ -1,35 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './VNCViewer.css';
 
-// Import noVNC - use ES6 import with fallback
-// @ts-ignore
-import * as novnc from '@novnc/novnc';
-
-// Try to get RFB from different export patterns
-let RFB: any = null;
-if (novnc.RFB) {
-  RFB = novnc.RFB;
-} else if (novnc.default?.RFB) {
-  RFB = novnc.default.RFB;
-} else if (novnc.default) {
-  RFB = novnc.default;
-} else {
-  // Try alternative import paths if main import doesn't work
-  try {
-    // @ts-ignore
-    const novncCore = require('@novnc/novnc/core/rfb');
-    RFB = novncCore.default || novncCore.RFB || novncCore;
-  } catch (e2) {
-    try {
-      // @ts-ignore
-      const novncLib = require('@novnc/novnc/lib/rfb');
-      RFB = novncLib.default || novncLib.RFB || novncLib;
-    } catch (e3) {
-      console.error('Failed to import noVNC:', e3);
-    }
-  }
-}
-
 interface VNCViewerProps {
   url: string;
   machineName: string;
@@ -42,17 +13,40 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('Łączenie...');
   const [rfbLoaded, setRfbLoaded] = useState(false);
+  const [RFB, setRFB] = useState<any>(null);
 
-  // Check if RFB is loaded
+  // Load noVNC dynamically to avoid top-level await issues
   useEffect(() => {
-    if (RFB) {
-      console.log('noVNC RFB loaded:', RFB);
-      setRfbLoaded(true);
-      setStatus('Gotowe do połączenia');
-    } else {
-      console.error('noVNC RFB not available');
-      setStatus('Błąd: noVNC nie jest dostępny. Sprawdź czy biblioteka jest zainstalowana.');
-    }
+    const loadNoVNC = async () => {
+      try {
+        // Try dynamic import first
+        // @ts-ignore
+        const novnc = await import('@novnc/novnc');
+        
+        let rfb: any = null;
+        if (novnc.RFB) {
+          rfb = novnc.RFB;
+        } else if (novnc.default?.RFB) {
+          rfb = novnc.default.RFB;
+        } else if (novnc.default) {
+          rfb = novnc.default;
+        }
+        
+        if (rfb) {
+          setRFB(rfb);
+          setRfbLoaded(true);
+          setStatus('Gotowe do połączenia');
+          console.log('noVNC RFB loaded:', rfb);
+        } else {
+          throw new Error('RFB not found in noVNC module');
+        }
+      } catch (error) {
+        console.error('Failed to load noVNC:', error);
+        setStatus('Błąd: noVNC nie jest dostępny. Sprawdź czy biblioteka jest zainstalowana.');
+      }
+    };
+
+    loadNoVNC();
   }, []);
 
   useEffect(() => {
