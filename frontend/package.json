@@ -19,9 +19,9 @@
   "devDependencies": {
   },
   "scripts": {
-    "start": "node node_modules/.bin/craco start",
-    "build": "node node_modules/.bin/craco build",
-    "test": "node node_modules/.bin/craco test",
+    "start": "./node_modules/.bin/craco start",
+    "build": "./node_modules/.bin/craco build",
+    "test": "./node_modules/.bin/craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
