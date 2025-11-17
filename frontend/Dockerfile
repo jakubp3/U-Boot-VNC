@@ -10,8 +10,8 @@ COPY . .
 # Ensure node_modules is properly installed
 RUN npm install --legacy-peer-deps
 
-# Verify craco is installed
-RUN ls -la node_modules/.bin/ | grep craco || (echo "craco not found, checking @craco/craco..." && ls -la node_modules/@craco/ 2>/dev/null || echo "@craco/craco not installed")
+# Verify craco is installed and find its location
+RUN ls -la node_modules/.bin/craco && echo "---" && find node_modules/@craco -name "craco.js" 2>/dev/null || echo "craco.js not found"
 
 EXPOSE 3000
 
