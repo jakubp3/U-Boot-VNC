@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import RFB from 'novnc-core/src/rfb';
+import 'novnc-core/src/style.css';
 import './VNCViewer.css';
 
 interface VNCViewerProps {
@@ -7,119 +9,66 @@ interface VNCViewerProps {
   onClose?: () => void;
 }
 
+const buildWebSocketUrl = (rawUrl: string): string => {
+  let wsProtocol = 'ws';
+  let host = '';
+  let port = '';
+
+  const trimmedUrl = rawUrl.trim();
+
+  // Case 1: WebSocket URLs provided directly
+  if (trimmedUrl.startsWith('ws://') || trimmedUrl.startsWith('wss://')) {
+    return trimmedUrl;
+  }
+
+  // Case 2: HTTP/HTTPS URLs (e.g. http://localhost:6080/vnc.html?host=...)
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    const urlObj = new URL(trimmedUrl);
+    wsProtocol = urlObj.protocol === 'https:' ? 'wss' : 'ws';
+
+    // If query params specify a target host/port, use them (noVNC style)
+    const targetHost = urlObj.searchParams.get('host');
+    const targetPort = urlObj.searchParams.get('port');
+
+    if (targetHost && targetPort) {
+      host = targetHost;
+      port = targetPort;
+      return `${wsProtocol}://${host}:${port}`;
+    }
+
+    host = urlObj.hostname;
+    port = urlObj.port || (wsProtocol === 'wss' ? '443' : '80');
+
+    // Common WebSocket endpoints for noVNC/websockify
+    return `${wsProtocol}://${host}:${port}/websockify`;
+  }
+
+  // Case 3: host:port or just hostname
+  if (trimmedUrl.includes(':')) {
+    const [parsedHost, parsedPort] = trimmedUrl.split(':');
+    host = parsedHost || 'localhost';
+    port = parsedPort || '6080';
+    return `${wsProtocol}://${host}:${port}/websockify`;
+  }
+
+  // Default fallback: assume hostname with VNC default port
+  host = trimmedUrl || 'localhost';
+  port = '5900';
+  return `${wsProtocol}://${host}:${port}`;
+};
+
 const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
   const screenRef = useRef<HTMLDivElement>(null);
   const rfbRef = useRef<any>(null);
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('Łączenie...');
-  const [rfbLoaded, setRfbLoaded] = useState(false);
-  const [RFB, setRFB] = useState<any>(null);
-
-  // Load noVNC dynamically to avoid top-level await issues
-  useEffect(() => {
-    const loadNoVNC = async () => {
-      try {
-        // Try dynamic import first
-        // @ts-ignore
-        const novnc = await import('@novnc/novnc');
-        
-        let rfb: any = null;
-        if (novnc.RFB) {
-          rfb = novnc.RFB;
-        } else if (novnc.default?.RFB) {
-          rfb = novnc.default.RFB;
-        } else if (novnc.default) {
-          rfb = novnc.default;
-        }
-        
-        if (rfb) {
-          setRFB(rfb);
-          setRfbLoaded(true);
-          setStatus('Gotowe do połączenia');
-          console.log('noVNC RFB loaded:', rfb);
-        } else {
-          throw new Error('RFB not found in noVNC module');
-        }
-      } catch (error) {
-        console.error('Failed to load noVNC:', error);
-        setStatus('Błąd: noVNC nie jest dostępny. Sprawdź czy biblioteka jest zainstalowana.');
-      }
-    };
-
-    loadNoVNC();
-  }, []);
 
   useEffect(() => {
-    if (!screenRef.current || !RFB || !rfbLoaded) return;
+    if (!screenRef.current) return;
 
     const connectToVNC = async () => {
       try {
-        // Parse VNC URL - support multiple formats
-        let wsUrl = url;
-        let host = '';
-        let port = '';
-        let protocol = 'ws';
-        
-        console.log('Parsing VNC URL:', url);
-        
-        // Case 1: Full HTTP/HTTPS URL (e.g., http://localhost:6080/vnc.html)
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-          try {
-            const urlObj = new URL(url);
-            host = urlObj.hostname;
-            port = urlObj.port || (url.startsWith('https://') ? '443' : '80');
-            protocol = url.startsWith('https://') ? 'wss' : 'ws';
-            
-            // If URL contains /vnc.html or similar, it's likely noVNC
-            // WebSocket endpoint is usually /websockify on the same host:port
-            if (urlObj.pathname.includes('/vnc') || urlObj.pathname.includes('/novnc')) {
-              // Check for query params that might specify target host/port
-              const targetHost = urlObj.searchParams.get('host');
-              const targetPort = urlObj.searchParams.get('port');
-              
-              if (targetHost && targetPort) {
-                // Remote VNC server specified in query params
-                host = targetHost;
-                port = targetPort;
-                wsUrl = `${protocol}://${host}:${port}`;
-              } else {
-                // Local noVNC server - use /websockify endpoint
-                // Common noVNC WebSocket paths: /websockify, /websocket, /ws
-                wsUrl = `${protocol}://${host}:${port}/websockify`;
-              }
-            } else {
-              // Direct conversion from HTTP to WS
-              wsUrl = url.replace(/^https?:\/\//, `${protocol}://`);
-            }
-          } catch (e) {
-            console.error('Error parsing HTTP URL:', e);
-            setStatus('Błąd parsowania URL');
-            return;
-          }
-        }
-        // Case 2: Just host:port (e.g., localhost:6080)
-        else if (url.includes(':') && !url.startsWith('ws://') && !url.startsWith('wss://')) {
-          const parts = url.split(':');
-          if (parts.length === 2) {
-            host = parts[0];
-            port = parts[1];
-            // Try common WebSocket paths
-            wsUrl = `ws://${host}:${port}/websockify`;
-          } else {
-            wsUrl = `ws://${url}`;
-          }
-        }
-        // Case 3: Already a WebSocket URL
-        else if (url.startsWith('ws://') || url.startsWith('wss://')) {
-          wsUrl = url;
-        }
-        // Case 4: Just hostname (default to common VNC port 5900)
-        else {
-          host = url;
-          port = '5900';
-          wsUrl = `ws://${host}:${port}`;
-        }
-        
+        const wsUrl = buildWebSocketUrl(url);
         console.log('Connecting to WebSocket URL:', wsUrl);
         setStatus(`Łączenie z ${wsUrl}...`);
         
@@ -174,7 +123,7 @@ const VNCViewer: React.FC<VNCViewerProps> = ({ url, machineName, onClose }) => {
         rfbRef.current = null;
       }
     };
-  }, [url, RFB]);
+  }, [url]);
 
   const handleDisconnect = () => {
     if (rfbRef.current) {
