@@ -12,5 +12,5 @@ RUN npm install --legacy-peer-deps
 
 EXPOSE 3000
 
-CMD ["npx", "craco", "start"]
+CMD ["./node_modules/.bin/craco", "start"]
 
